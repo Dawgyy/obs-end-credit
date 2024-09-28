@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="styles.css">
+    <title>Crédits Finaux Twitch Madyann</title>
+</head>
+<body class="overflow-hidden font-bold text-white">
+    <video autoplay loop muted id="background-video" class="fixed right-0 bottom-0 min-w-full min-h-full -z-10">
+        <source src="vid.mp4" type="video/mp4">
+        Votre navigateur ne supporte pas la balise vidéo.
+    </video>
+
+    <div id="credits-container" class="absolute inset-0 flex justify-center items-center overflow-hidden">
+        <div id="credits-wrapper" class="w-3/5 h-3/4 overflow-hidden border-transparent rounded-lg"> <!-- Nouvelle boîte avec overflow caché -->
+            <div id="scrolling-credits" class="text-center text-4xl space-y-4">
+                <div id="sub-list" class="space-y-2"></div>
+                <div id="follower-list" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="absolute bottom-5 left-5 text-4xl font-bold leading-none">
+        <p>Merci à tous pour votre contribution !</p>
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
