@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const fetch = require('node-fetch');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3030;
@@ -59,10 +60,47 @@ app.get('/auth/callback', async (req, res) => {
     }
 });
 
-async function ensureAccessToken() {
-    if (!accessToken || Date.now() > tokenExpirationTime) {
-        console.log('Token d\'accès expiré ou manquant, veuillez vous authentifier à nouveau via /auth');
+async function refreshAccessToken() {
+    if (!accessToken || Date.now() > tokenExpirationTime - 5 * 60 * 1000) {
+        console.log('Rafraîchissement du token d’accès...');
+
+        const url = 'https://id.twitch.tv/oauth2/token';
+        const params = new URLSearchParams();
+        params.append('client_id', CLIENT_ID);
+        params.append('client_secret', CLIENT_SECRET);
+        params.append('grant_type', 'client_credentials');
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+
+            if (!response.ok) {
+                console.error(`Erreur lors du rafraîchissement du token : ${response.status} - ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('Détails de l’erreur :', errorText);
+                throw new Error('Erreur lors du rafraîchissement du token');
+            }
+
+            const data = await response.json();
+            accessToken = data.access_token;
+            tokenExpirationTime = Date.now() + (data.expires_in * 1000);
+            console.log('Token d’accès rafraîchi avec succès:', accessToken);
+        } catch (error) {
+            console.error('Erreur lors du rafraîchissement du token d’accès :', error);
+        }
     }
+}
+
+cron.schedule('*/30 * * * *', async () => {
+    console.log('Exécution du cron pour vérifier et rafraîchir le token...');
+    await refreshAccessToken();
+});
+
+async function ensureAccessToken() {
+    await refreshAccessToken();
 }
 
 app.get('/subs', async (req, res) => {
