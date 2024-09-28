@@ -5,57 +5,71 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 3030;
 
-const CLIENT_ID = process.env.CLIENT_ID
-const CLIENT_SECRET = process.env.CLIENT_SECRET
-const BROADCASTER_ID = process.env.BROADCASTER_ID
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const BROADCASTER_ID = process.env.BROADCASTER_ID;
 
-let accessToken = '2c4f9doolevt91tp1n2luyntu5pf3p';
-
-console.log('CLIENT_ID:', CLIENT_ID);
-console.log('CLIENT_SECRET:', CLIENT_SECRET);
-app.use(express.static('public'));
-
-
+let accessToken = null;
 let tokenExpirationTime = 0;
 
-async function getAccessToken() {
-    try {
-        const url = 'https://id.twitch.tv/oauth2/token';
-        const params = new URLSearchParams();
-        params.append('client_id', CLIENT_ID);
-        params.append('client_secret', CLIENT_SECRET);
-        params.append('grant_type', 'client_credentials');
-        params.append('scope', 'channel:read:subscriptions channel:manage:read moderator:read:followers');
+app.use(express.static('public'));
 
+app.get('/auth', (req, res) => {
+    const redirectUri = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=http://localhost:${PORT}/auth/callback&response_type=code&scope=channel:read:subscriptions moderator:read:followers`;
+    res.redirect(redirectUri);
+});
+
+app.get('/auth/callback', async (req, res) => {
+    const code = req.query.code;
+    if (!code) {
+        res.status(400).send('Code d’autorisation manquant');
+        return;
+    }
+
+    const url = 'https://id.twitch.tv/oauth2/token';
+    const params = new URLSearchParams();
+    params.append('client_id', CLIENT_ID);
+    params.append('client_secret', CLIENT_SECRET);
+    params.append('code', code);
+    params.append('grant_type', 'authorization_code');
+    params.append('redirect_uri', `http://localhost:${PORT}/auth/callback`);
+
+    try {
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: params.toString()
         });
 
         if (!response.ok) {
-            console.error(`Erreur lors de l'obtention du token : ${response.status} - ${response.statusText}`);
+            console.error(`Erreur lors de l'échange du code : ${response.status} - ${response.statusText}`);
             const errorText = await response.text();
             console.error('Détails de l’erreur :', errorText);
-            throw new Error('Erreur lors de l’obtention du token d’accès');
+            return res.status(response.status).send('Erreur lors de l\'échange du code');
         }
 
         const data = await response.json();
         accessToken = data.access_token;
         tokenExpirationTime = Date.now() + (data.expires_in * 1000);
-        console.log('Token d’accès obtenu avec succès:', accessToken);
+        console.log('Token d’accès utilisateur obtenu avec succès:', accessToken);
+        res.send('Authentification réussie. Retournez à l’application.');
     } catch (error) {
-        console.error('Erreur lors de l’obtention du token d’accès :', error);
+        console.error('Erreur lors de l’échange du code :', error);
+        res.status(500).send('Erreur interne lors de l’échange du code');
+    }
+});
+
+async function ensureAccessToken() {
+    if (!accessToken || Date.now() > tokenExpirationTime) {
+        console.log('Token d\'accès expiré ou manquant, veuillez vous authentifier à nouveau via /auth');
     }
 }
 
-
-
 app.get('/subs', async (req, res) => {
+    await ensureAccessToken();
+
     if (!accessToken) {
-        await getAccessToken();
+        return res.status(401).send('Authentification requise. Veuillez accéder à /auth pour authentifier.');
     }
 
     try {
@@ -65,29 +79,6 @@ app.get('/subs', async (req, res) => {
                 'Client-Id': CLIENT_ID
             }
         });
-
-        if (response.status === 401) {
-            console.warn('Le token est expiré, récupération d\'un nouveau token...');
-            await getAccessToken();
-
-            const retryResponse = await fetch(`https://api.twitch.tv/helix/subscriptions?broadcaster_id=${BROADCASTER_ID}`, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Client-Id': CLIENT_ID
-                }
-            });
-
-            if (!retryResponse.ok) {
-                console.error(`Erreur API Twitch après renouvellement du token : ${retryResponse.status} - ${retryResponse.statusText}`);
-                const retryErrorText = await retryResponse.text();
-                console.error('Détails de l’erreur :', retryErrorText);
-                return res.status(retryResponse.status).json({ error: 'Erreur lors de la récupération des abonnés après renouvellement du token' });
-            }
-
-            const data = await retryResponse.json();
-            console.log('Données d’abonnés récupérées après renouvellement du token:', data);
-            return res.json(data.data);
-        }
 
         if (!response.ok) {
             console.error(`Erreur API Twitch : ${response.status} - ${response.statusText}`);
@@ -105,39 +96,11 @@ app.get('/subs', async (req, res) => {
     }
 });
 
-async function exchangeCodeForToken(code) {
-    const url = 'https://id.twitch.tv/oauth2/token';
-    const params = new URLSearchParams();
-    params.append('client_id', CLIENT_ID);
-    params.append('client_secret', CLIENT_SECRET);
-    params.append('code', code);
-    params.append('grant_type', 'authorization_code');
-    params.append('redirect_uri', 'http://localhost:3030/auth/callback');
-    params.append('scope', 'channel:read:subscriptions channel:manage:read moderator:read:followers');
-
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString()
-    });
-
-    if (!response.ok) {
-        console.error(`Erreur lors de l'échange du code : ${response.status} - ${response.statusText}`);
-        const errorText = await response.text();
-        console.error('Détails de l’erreur :', errorText);
-        return;
-    }
-
-    const data = await response.json();
-    accessToken = data.access_token;
-    console.log('Token d’accès obtenu avec succès:', accessToken);
-}
-
-
 app.get('/followers', async (req, res) => {
-    if (!accessToken || Date.now() > tokenExpirationTime) {
-        await getAccessToken();
+    await ensureAccessToken();
+
+    if (!accessToken) {
+        return res.status(401).send('Authentification requise. Veuillez accéder à /auth pour authentifier.');
     }
 
     let followers = [];
@@ -147,7 +110,7 @@ app.get('/followers', async (req, res) => {
 
     try {
         while (followers.length < limit) {
-            let url = `https://api.twitch.tv/helix/channels/followers?user_id{BROADCASTER_ID}&broadcaster_id=${BROADCASTER_ID}&first=${pageSize}`;
+            let url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${BROADCASTER_ID}&first=${pageSize}`;
             if (cursor) {
                 url += `&after=${cursor}`;
             }
@@ -174,7 +137,7 @@ app.get('/followers', async (req, res) => {
             if (data.pagination && data.pagination.cursor) {
                 cursor = data.pagination.cursor;
             } else {
-                break; 
+                break;
             }
 
             if (followers.length >= limit) {
@@ -183,24 +146,11 @@ app.get('/followers', async (req, res) => {
         }
 
         followers = followers.slice(0, limit);
-
         res.json(followers);
     } catch (error) {
         console.error('Erreur lors de la récupération des followers :', error);
         res.status(500).json({ error: 'Erreur lors de la récupération des followers' });
     }
-});
-
-
-app.get('/auth/callback', async (req, res) => {
-    const code = req.query.code;
-    if (!code) {
-        res.status(400).send('Code d’autorisation manquant');
-        return;
-    }
-
-    await exchangeCodeForToken(code);
-    res.send('Authentification réussie. Retournez à l’application.');
 });
 
 app.listen(PORT, () => {
