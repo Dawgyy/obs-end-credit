@@ -6,6 +6,9 @@ const cron = require('node-cron');
 const app = express();
 const PORT = process.env.PORT || 3030;
 
+const ENV = process.env.NODE_ENV || 'development'; // "development" ou "production"
+const DOMAIN = ENV === 'development' ? `localhost:${PORT}` : process.env.DOMAIN;
+
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const BROADCASTER_ID = process.env.BROADCASTER_ID;
@@ -15,11 +18,16 @@ let tokenExpirationTime = 0;
 
 app.use(express.static('public'));
 
+// Route pour démarrer l'authentification utilisateur
 app.get('/auth', (req, res) => {
-    const redirectUri = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=http://localhost:${PORT}/auth/callback&response_type=code&scope=channel:read:subscriptions moderator:read:followers`;
-    res.redirect(redirectUri);
+    const protocol = ENV === 'development' ? 'http' : 'https';
+    const redirectUri = `${protocol}://${DOMAIN}/auth/callback`;
+
+    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=channel:read:subscriptions moderator:read:followers`;
+    res.redirect(authUrl);
 });
 
+// Route pour gérer le callback après l'authentification Twitch
 app.get('/auth/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) {
@@ -27,13 +35,16 @@ app.get('/auth/callback', async (req, res) => {
         return;
     }
 
+    const protocol = ENV === 'development' ? 'http' : 'https';
+    const redirectUri = `${protocol}://${DOMAIN}/auth/callback`;
+
     const url = 'https://id.twitch.tv/oauth2/token';
     const params = new URLSearchParams();
     params.append('client_id', CLIENT_ID);
     params.append('client_secret', CLIENT_SECRET);
     params.append('code', code);
     params.append('grant_type', 'authorization_code');
-    params.append('redirect_uri', `http://localhost:${PORT}/auth/callback`);
+    params.append('redirect_uri', redirectUri);
 
     try {
         const response = await fetch(url, {
@@ -60,57 +71,27 @@ app.get('/auth/callback', async (req, res) => {
     }
 });
 
-async function refreshAccessToken() {
-    if (!accessToken || Date.now() > tokenExpirationTime - 5 * 60 * 1000) {
-        console.log('Rafraîchissement du token d’accès...');
-
-        const url = 'https://id.twitch.tv/oauth2/token';
-        const params = new URLSearchParams();
-        params.append('client_id', CLIENT_ID);
-        params.append('client_secret', CLIENT_SECRET);
-        params.append('grant_type', 'client_credentials');
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params.toString()
-            });
-
-            if (!response.ok) {
-                console.error(`Erreur lors du rafraîchissement du token : ${response.status} - ${response.statusText}`);
-                const errorText = await response.text();
-                console.error('Détails de l’erreur :', errorText);
-                throw new Error('Erreur lors du rafraîchissement du token');
-            }
-
-            const data = await response.json();
-            accessToken = data.access_token;
-            tokenExpirationTime = Date.now() + (data.expires_in * 1000);
-            console.log('Token d’accès rafraîchi avec succès:', accessToken);
-        } catch (error) {
-            console.error('Erreur lors du rafraîchissement du token d’accès :', error);
-        }
-    }
-}
-
-cron.schedule('*/30 * * * *', async () => {
+// Rafraîchissement du token d'accès utilisateur via cron (avant l'expiration)
+cron.schedule('*/15 * * * *', async () => {
     console.log('Exécution du cron pour vérifier et rafraîchir le token...');
-    await refreshAccessToken();
+    if (Date.now() > tokenExpirationTime - 5 * 60 * 1000) {
+        console.log('Rafraîchissement nécessaire, mais l’utilisateur doit être ré-authentifié.');
+        // Ici, une solution serait de rediriger l'utilisateur vers la route d'authentification pour ré-authentifier
+    }
 });
 
+// Middleware pour vérifier le token avant de faire des requêtes
 async function ensureAccessToken() {
-    await refreshAccessToken();
+    if (!accessToken || Date.now() > tokenExpirationTime) {
+        console.error('Token expiré ou non disponible, accès refusé.');
+        throw new Error('Token expiré ou non disponible, veuillez vous ré-authentifier.');
+    }
 }
 
+// Route pour récupérer les abonnés de la chaîne
 app.get('/subs', async (req, res) => {
-    await ensureAccessToken();
-
-    if (!accessToken) {
-        return res.status(401).send('Authentification requise. Veuillez accéder à /auth pour authentifier.');
-    }
-
     try {
+        await ensureAccessToken();
         const response = await fetch(`https://api.twitch.tv/helix/subscriptions?broadcaster_id=${BROADCASTER_ID}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -134,19 +115,15 @@ app.get('/subs', async (req, res) => {
     }
 });
 
+// Route pour récupérer les followers de la chaîne
 app.get('/followers', async (req, res) => {
-    await ensureAccessToken();
-
-    if (!accessToken) {
-        return res.status(401).send('Authentification requise. Veuillez accéder à /auth pour authentifier.');
-    }
-
-    let followers = [];
-    let cursor = '';
-    const limit = 10000;
-    const pageSize = 100;
-
     try {
+        await ensureAccessToken();
+        let followers = [];
+        let cursor = '';
+        const limit = 10000;
+        const pageSize = 100;
+
         while (followers.length < limit) {
             let url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${BROADCASTER_ID}&first=${pageSize}`;
             if (cursor) {
@@ -191,6 +168,7 @@ app.get('/followers', async (req, res) => {
     }
 });
 
+// Lancer le serveur
 app.listen(PORT, () => {
-    console.log(`Serveur lancé sur http://localhost:${PORT}`);
+    console.log(`Serveur lancé sur ${ENV === 'development' ? 'http' : 'https'}://${DOMAIN}`);
 });
