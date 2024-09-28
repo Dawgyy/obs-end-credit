@@ -6,7 +6,7 @@ const cron = require('node-cron');
 const app = express();
 const PORT = process.env.PORT || 3030;
 
-const ENV = process.env.NODE_ENV || 'development'; // "development" ou "production"
+const ENV = process.env.NODE_ENV || 'development';
 const DOMAIN = ENV === 'development' ? `localhost:${PORT}` : process.env.DOMAIN;
 
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -18,7 +18,6 @@ let tokenExpirationTime = 0;
 
 app.use(express.static('public'));
 
-// Route pour démarrer l'authentification utilisateur
 app.get('/auth', (req, res) => {
     const protocol = ENV === 'development' ? 'http' : 'https';
     const redirectUri = `${protocol}://${DOMAIN}/auth/callback`;
@@ -27,7 +26,6 @@ app.get('/auth', (req, res) => {
     res.redirect(authUrl);
 });
 
-// Route pour gérer le callback après l'authentification Twitch
 app.get('/auth/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) {
@@ -71,16 +69,13 @@ app.get('/auth/callback', async (req, res) => {
     }
 });
 
-// Rafraîchissement du token d'accès utilisateur via cron (avant l'expiration)
 cron.schedule('*/15 * * * *', async () => {
     console.log('Exécution du cron pour vérifier et rafraîchir le token...');
     if (Date.now() > tokenExpirationTime - 5 * 60 * 1000) {
         console.log('Rafraîchissement nécessaire, mais l’utilisateur doit être ré-authentifié.');
-        // Ici, une solution serait de rediriger l'utilisateur vers la route d'authentification pour ré-authentifier
     }
 });
 
-// Middleware pour vérifier le token avant de faire des requêtes
 async function ensureAccessToken() {
     if (!accessToken || Date.now() > tokenExpirationTime) {
         console.error('Token expiré ou non disponible, accès refusé.');
@@ -88,7 +83,6 @@ async function ensureAccessToken() {
     }
 }
 
-// Route pour récupérer les abonnés de la chaîne
 app.get('/subs', async (req, res) => {
     try {
         await ensureAccessToken();
@@ -115,7 +109,6 @@ app.get('/subs', async (req, res) => {
     }
 });
 
-// Route pour récupérer les followers de la chaîne
 app.get('/followers', async (req, res) => {
     try {
         await ensureAccessToken();
@@ -168,7 +161,6 @@ app.get('/followers', async (req, res) => {
     }
 });
 
-// Lancer le serveur
 app.listen(PORT, () => {
     console.log(`Serveur lancé sur ${ENV === 'development' ? 'http' : 'https'}://${DOMAIN}`);
 });

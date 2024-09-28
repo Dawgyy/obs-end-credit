@@ -39,6 +39,8 @@ This project is a dynamic end credit script designed for use with OBS Studio. It
    CLIENT_SECRET=your_twitch_client_secret
    BROADCASTER_ID=your_twitch_broadcaster_id
    PORT=3030 # Optional, default is 3030
+   DOMAIN=your.domain.com #if you reverse proxy this app
+   NODE_ENV= #production|developement
    ```
 
 4. **Run the server**:
