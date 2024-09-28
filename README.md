@@ -73,7 +73,7 @@ This project is a dynamic end credit script designed for use with OBS Studio. It
 The project uses Tailwind CSS for styling. The custom styles are compiled locally. To compile Tailwind, run the following command:
 
 ```sh
-npx tailwindcss -i ./styles.css -o ./public/tailwind.css --watch
+npx tailwindcss -i ./public/styles.css -o ./public/tailwind.css
 ```
 
 This command will watch for changes and update the `tailwind.css` file accordingly.
