@@ -13,7 +13,6 @@ const PORT = process.env.PORT || 3030;
 const cache = new NodeCache({ stdTTL: 300 });
 
 app.use(express.static('public'));
-
 app.use((req, res, next) => {
     req.cache = cache; 
     next();
@@ -32,20 +31,18 @@ if (require.main === module) {
     });
 
     cronTask = cron.schedule('*/15 * * * *', async () => {
-        if (Date.now() > parseInt(process.env.TOKEN_EXPIRATION_TIME) - 5 * 60 * 1000) {
             await refreshAccessToken();
-        }
     });
 }
 
 module.exports = {
     app,
-    close: () => {
-        if (server) {
-            server.close();
-        }
+    close: async () => {
         if (cronTask) {
             cronTask.stop();
+        }
+        if (server) {
+            server.close();
         }
     }
 };

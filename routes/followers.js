@@ -9,6 +9,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 router.get('/', async (req, res) => {
     try {
         await ensureAccessToken();
+
         const cachedData = req.cache.get('followers');
         if (cachedData) {
             return res.json(cachedData);
@@ -19,13 +20,16 @@ router.get('/', async (req, res) => {
         const limit = 10000;
         const pageSize = 100;
 
+        let accessToken = process.env.ACCESS_TOKEN || null;
+
         while (followers.length < limit) {
             let url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${BROADCASTER_ID}&first=${pageSize}`;
             if (cursor) url += `&after=${cursor}`;
 
             const response = await axios.get(url, {
+                httpsAgent: new (require('https')).Agent({ keepAlive: false }),
                 headers: {
-                    'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`,
+                    'Authorization': `Bearer ${accessToken}`,
                     'Client-Id': CLIENT_ID
                 }
             });
@@ -45,10 +49,10 @@ router.get('/', async (req, res) => {
         req.cache.set('followers', followers.slice(0, limit));
         res.json(followers.slice(0, limit));
     } catch (error) {
-        if (error.response && error.response.status === 401) {
-            return res.status(401).json({ error: 'Unauthorized. Please authenticate.' });
+        if (error.statusCode === 401) {
+            return res.status(467).json({ error: 'Unauthorized. Please authenticate.' });
         }
-        res.status(500).json({ error: 'Erreur lors de la récupération des followers' });
+        res.status(500).json({ error: 'Erreur lors de la récupération des abonnés' });
     }
 });
 

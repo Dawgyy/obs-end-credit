@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const subs = await response.json();
-            console.log('Données d’abonnés récupérées côté client :', subs);
 
             if (Array.isArray(subs) && subs.length > 0) {
                 subs.forEach(sub => {
@@ -36,7 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const followers = await response.json();
-            console.log('Données des followers récupérées côté client :', followers);
 
             if (Array.isArray(followers) && followers.length > 0) {
                 followers.forEach(follower => {
