@@ -13,4 +13,4 @@ yarn-error.log*
 .pids
 logs/
 
-package.lock.json
+package-lock.json
