@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function fetchSubs() {
         try {
-            const response = await fetch('/subs');
+            const response = await fetch('/api/subs');
             if (!response.ok) {
                 throw new Error(`Erreur HTTP lors de la récupération des abonnés : ${response.status}`);
             }
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function fetchFollowers() {
         try {
-            const response = await fetch('/followers');
+            const response = await fetch('/api/followers');
             if (!response.ok) {
                 throw new Error(`Erreur HTTP lors de la récupération des followers : ${response.status}`);
             }

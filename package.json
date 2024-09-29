@@ -1,20 +1,33 @@
 {
-  "name": "madsub",
+  "name": "obs-end-credit",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test": "jest --detectOpenHandles",
+    "start": "npm run lint && npm run build && npm run test && node server.js",
+    "build:css": "npx tailwindcss -i ./public/styles.css -o ./public/tailwind.css",
+    "minify:css": "npx postcss public/tailwind.css -o public/styles.min.css",
+    "build": "npm run build:css && npm run minify:css",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.7.7",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
-    "node-fetch": "^2.7.0",
     "tailwindcss": "^3.4.13"
+  },
+  "devDependencies": {
+    "cssnano": "^7.0.6",
+    "eslint": "^9.11.1",
+    "globals": "^15.9.0",
+    "jest": "^29.7.0",
+    "postcss-cli": "^11.0.0",
+    "supertest": "^7.0.0"
   }
 }

@@ -5,7 +5,7 @@
 body {
     margin: 0;
     overflow: hidden;
-    font-family: 'Arial Black', sans-serif;
+    font-family: 'Lato', sans-serif;
     color: white;
 }
 
@@ -16,6 +16,7 @@ body {
     min-width: 100%;
     min-height: 100%;
     z-index: -1;
+    filter: brightness(0.3) contrast(1.2);
 }
 
 #credits-container {
@@ -34,15 +35,25 @@ body {
     height: 75%;
     overflow: hidden;
     position: relative;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 #scrolling-credits {
     text-align: center;
-    font-size: 2em;
+    font-size: 2.25rem;
     position: absolute;
     bottom: -100%;
     width: 100%;
-    animation: scroll-up 60s linear infinite;
+    animation: scroll-up 80s linear infinite;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #e0e0e0;
+    line-height: 1.7;
+    letter-spacing: 1.5px;
+}
 
 @keyframes scroll-up {
     0% {
@@ -50,5 +61,15 @@ body {
     }
     100% {
         transform: translateY(-100%);
+    }
+}
+
+@media (max-width: 768px) {
+    #scrolling-credits {
+        font-size: 1.25rem;
+    }
+
+    .absolute.bottom-10.left-10 {
+        font-size: 1.75rem;
     }
 }
