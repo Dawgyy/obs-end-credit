@@ -45,6 +45,9 @@ router.get('/', async (req, res) => {
         req.cache.set('followers', followers.slice(0, limit));
         res.json(followers.slice(0, limit));
     } catch (error) {
+        if (error.response && error.response.status === 401) {
+            return res.status(401).json({ error: 'Unauthorized. Please authenticate.' });
+        }
         res.status(500).json({ error: 'Erreur lors de la récupération des followers' });
     }
 });
