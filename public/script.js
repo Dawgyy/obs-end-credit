@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (Array.isArray(subs) && subs.length > 0) {
                 subs.forEach(sub => {
                     const subElement = document.createElement('div');
-                    subElement.textContent = sub.user_name + "(SUB)";
+                    subElement.textContent = sub.user_name + " (SUB)";
                     subElement.classList.add('text-4xl', 'text-white');
                     subList.appendChild(subElement);
                 });
@@ -56,10 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const creditsHeight = scrollingCredits.scrollHeight;
     const viewportHeight = window.innerHeight;
-    const scrollDuration = (creditsHeight / viewportHeight) * 40;
-    scrollingCredits.style.animation = `scroll-up ${scrollDuration}s linear infinite`;
-
-    setTimeout(() => {
-        scrollingCredits.style.bottom = '100%';
-    }, 500);
+    
+    const scrollDuration = creditsHeight / viewportHeight * 30;
+    scrollingCredits.style.animation = `scroll-up ${scrollDuration}s ease-out infinite`;
 });
