@@ -1,3 +1,22 @@
+async function fetchProtectedData(endpoint) {
+    try {
+        const response = await fetch(endpoint);
+        if (response.status === 401) {
+            window.location.href = '/auth/login';
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Erreur lors de la récupération des données :', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const subList = document.getElementById('sub-list');
     const followerList = document.getElementById('follower-list');
@@ -5,12 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function fetchSubs() {
         try {
-            const response = await fetch('/api/subs');
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP lors de la récupération des abonnés : ${response.status}`);
-            }
-
-            const subs = await response.json();
+            const subs = await fetchProtectedData('/api/subs');
 
             if (Array.isArray(subs) && subs.length > 0) {
                 subs.forEach(sub => {
@@ -19,8 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     subElement.classList.add('text-4xl', 'text-white');
                     subList.appendChild(subElement);
                 });
-            } else {
-                console.warn('Pas de données d’abonnés reçues ou format incorrect.');
             }
         } catch (error) {
             console.error('Erreur lors de la récupération des abonnés :', error);
@@ -29,12 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function fetchFollowers() {
         try {
-            const response = await fetch('/api/followers');
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP lors de la récupération des followers : ${response.status}`);
-            }
-
-            const followers = await response.json();
+            const followers = await fetchProtectedData('/api/followers');
 
             if (Array.isArray(followers) && followers.length > 0) {
                 followers.forEach(follower => {
@@ -43,8 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     followerElement.classList.add('text-4xl', 'text-white');
                     followerList.appendChild(followerElement);
                 });
-            } else {
-                console.warn('Pas de données de followers reçues ou format incorrect.');
             }
         } catch (error) {
             console.error('Erreur lors de la récupération des followers :', error);
@@ -53,10 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await fetchSubs();
     await fetchFollowers();
-
     const creditsHeight = scrollingCredits.scrollHeight;
     const viewportHeight = window.innerHeight;
-    
     const scrollDuration = creditsHeight / viewportHeight * 30;
     scrollingCredits.style.animation = `scroll-up ${scrollDuration}s ease-out infinite`;
 });
